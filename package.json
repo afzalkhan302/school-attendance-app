@@ -1,0 +1,41 @@
+{
+  "name": "school-attendance",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Offline-first school attendance app for teachers (Android via Capacitor).",
+  "scripts": {
+    "start": "node tools/serve.js",
+    "build": "node tools/build.js",
+    "android:sync": "node tools/build.js && npx cap sync android",
+    "android:apk": "node tools/build.js && npx cap sync android && cd android && gradlew.bat assembleDebug",
+    "android:open": "npx cap open android",
+    "test": "node tests/run.js && node tests/attendance.js && node tests/accounts.js && node tests/export.js && node tests/storage.js && node tests/boot.js && node tests/ui.js && node tests/ui-attendance.js && node tests/ui-accounts.js && node tests/ui-dashboard.js && node tests/ui-storage.js",
+    "test:model": "node tests/run.js",
+    "test:storage": "node tests/storage.js",
+    "test:boot": "node tests/boot.js",
+    "test:ui-storage": "node tests/ui-storage.js",
+    "test:attendance": "node tests/attendance.js",
+    "test:accounts": "node tests/accounts.js",
+    "test:export": "node tests/export.js",
+    "test:ui": "node tests/ui.js",
+    "test:ui-attendance": "node tests/ui-attendance.js",
+    "test:ui-accounts": "node tests/ui-accounts.js",
+    "test:ui-dashboard": "node tests/ui-dashboard.js"
+  },
+  "keywords": [
+    "attendance",
+    "school",
+    "offline",
+    "capacitor"
+  ],
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.1",
+    "fake-indexeddb": "^6.2.5",
+    "jsdom": "^29.1.1"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/core": "^8.5.1"
+  }
+}

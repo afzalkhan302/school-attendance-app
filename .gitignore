@@ -1,0 +1,10 @@
+node_modules/
+.DS_Store
+Thumbs.db
+
+# Build output: assembled from index.html, css/ and js/ by `npm run build`
+/www/
+
+# Generated when the app is wrapped for Android
+/android/
+/ios/

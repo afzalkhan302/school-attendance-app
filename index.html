@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1d4ed8">
+<meta name="description" content="Offline school attendance register for teachers.">
+<title>School Attendance</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ================================================== Auth ============== -->
+<div class="auth" id="auth-view" hidden>
+  <div class="auth__card">
+
+    <div class="brand brand--auth">
+      <div class="brand__mark" id="auth-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M3 21h18"></path>
+          <path d="M5 21V8l7-5 7 5v13"></path>
+          <path d="M10 21v-6h4v6"></path>
+        </svg>
+      </div>
+      <div class="brand__text">
+        <p class="brand__name" id="auth-brand-name">School Attendance</p>
+        <p class="brand__sub">School Attendance System</p>
+      </div>
+    </div>
+
+    <!-- ---------------------------------------------------- Register --- -->
+    <form class="auth__form" id="register-form" novalidate hidden>
+      <h1 class="auth__title">Set up your school</h1>
+      <p class="auth__lead">This creates the school account for this device. Everything stays on the device — nothing is sent anywhere.</p>
+
+      <div class="field">
+        <label class="label" for="r-school">School name <span class="req" aria-hidden="true">*</span></label>
+        <input class="input" id="r-school" type="text" maxlength="80" placeholder="e.g. ABC Public School"
+               autocomplete="organization" autocapitalize="words" spellcheck="false" enterkeyhint="next">
+        <p class="error" id="re-schoolName" hidden></p>
+      </div>
+
+      <div class="field">
+        <label class="label" for="r-director">Director / owner name <span class="req" aria-hidden="true">*</span></label>
+        <input class="input" id="r-director" type="text" maxlength="80" placeholder="e.g. Mr. Imran Khan"
+               autocomplete="name" autocapitalize="words" spellcheck="false" enterkeyhint="next">
+        <p class="error" id="re-directorName" hidden></p>
+      </div>
+
+      <div class="field">
+        <label class="label" for="r-username">Username <span class="req" aria-hidden="true">*</span></label>
+        <input class="input" id="r-username" type="text" maxlength="24" placeholder="e.g. abc_admin"
+               autocomplete="username" autocapitalize="none" spellcheck="false" enterkeyhint="next">
+        <p class="error" id="re-username" hidden></p>
+      </div>
+
+      <div class="field">
+        <label class="label" for="r-password">Password <span class="req" aria-hidden="true">*</span></label>
+        <div class="input-wrap">
+          <input class="input" id="r-password" type="password" maxlength="72" placeholder="At least 6 characters"
+                 autocomplete="new-password" enterkeyhint="next">
+          <button class="reveal" type="button" data-reveal="r-password" aria-label="Show password">Show</button>
+        </div>
+        <p class="error" id="re-password" hidden></p>
+      </div>
+
+      <div class="field">
+        <label class="label" for="r-confirm">Confirm password <span class="req" aria-hidden="true">*</span></label>
+        <input class="input" id="r-confirm" type="password" maxlength="72" placeholder="Re-enter the password"
+               autocomplete="new-password" enterkeyhint="done">
+        <p class="error" id="re-confirmPassword" hidden></p>
+      </div>
+
+      <div class="field">
+        <label class="label" for="r-logo">School logo <span class="optional">optional</span></label>
+        <div class="logo-row">
+          <div class="logo-preview" id="r-logo-preview" aria-hidden="true"></div>
+          <div class="logo-row__actions">
+            <input type="file" id="r-logo" accept="image/png,image/jpeg,image/webp" hidden>
+            <button class="btn btn--soft btn--sm" type="button" id="r-logo-pick">Choose image</button>
+            <button class="btn btn--ghost btn--sm" type="button" id="r-logo-clear" hidden>Remove</button>
+          </div>
+        </div>
+        <p class="error" id="re-logo" hidden></p>
+      </div>
+
+      <button class="btn btn--primary btn--block" type="submit" id="r-submit">Create school account</button>
+
+      <p class="auth__switch">Already set up? <button class="linkbtn" type="button" id="to-login">Sign in</button></p>
+    </form>
+
+    <!-- ------------------------------------------------------- Login --- -->
+    <form class="auth__form" id="login-form" novalidate hidden>
+      <h1 class="auth__title">Sign in</h1>
+      <p class="auth__lead">Enter the school name or username for this device.</p>
+
+      <div class="field">
+        <label class="label" for="l-identifier">School name or username</label>
+        <input class="input" id="l-identifier" type="text" maxlength="80" placeholder="e.g. abc_admin"
+               autocomplete="username" autocapitalize="none" spellcheck="false" enterkeyhint="next">
+        <p class="error" id="le-identifier" hidden></p>
+      </div>
+
+      <div class="field">
+        <label class="label" for="l-password">Password</label>
+        <div class="input-wrap">
+          <input class="input" id="l-password" type="password" maxlength="72" placeholder="Your password"
+                 autocomplete="current-password" enterkeyhint="done">
+          <button class="reveal" type="button" data-reveal="l-password" aria-label="Show password">Show</button>
+        </div>
+        <p class="error" id="le-password" hidden></p>
+      </div>
+
+      <label class="check" for="l-remember">
+        <input type="checkbox" id="l-remember" checked>
+        <span>Remember login on this device</span>
+      </label>
+
+      <button class="btn btn--primary btn--block" type="submit" id="l-submit">Sign in</button>
+
+      <p class="auth__switch">Setting up another school? <button class="linkbtn" type="button" id="to-register">Create an account</button></p>
+    </form>
+
+  </div>
+</div>
+
+<!-- ================================================== App =============== -->
+<div id="app-view" hidden>
+
+<header class="appbar">
+  <div class="appbar__inner">
+    <div class="appbar__logo" id="appbar-logo" aria-hidden="true"></div>
+    <div class="appbar__text">
+      <h1 class="appbar__title" id="appbar-school">School Attendance</h1>
+      <p class="appbar__sub" id="appbar-sub">Student register</p>
+    </div>
+    <span class="badge" id="student-count" aria-label="Total students">0</span>
+  </div>
+</header>
+
+<main class="main" id="main">
+
+  <!-- ================================================ Dashboard ========= -->
+  <section class="screen is-active" id="screen-dashboard" aria-label="Dashboard">
+
+    <div class="hero">
+      <div class="hero__brand">
+        <div class="brand__mark brand__mark--hero" id="dash-logo" aria-hidden="true"></div>
+        <div class="hero__text">
+          <p class="hero__school" id="dash-school">School</p>
+          <p class="hero__sub">School Attendance System</p>
+          <p class="hero__meta" id="dash-director"></p>
+        </div>
+      </div>
+      <p class="hero__date" id="dash-today"></p>
+    </div>
+
+    <div class="statgrid statgrid--2">
+      <div class="stat-card">
+        <span class="stat-card__n" id="dash-total">0</span>
+        <span class="stat-card__l">Total students</span>
+      </div>
+      <div class="stat-card stat-card--pct">
+        <span class="stat-card__n" id="dash-percent">—</span>
+        <span class="stat-card__l">Attendance today</span>
+      </div>
+    </div>
+
+    <div class="statgrid statgrid--3">
+      <div class="stat-card stat-card--present">
+        <span class="stat-card__n" id="dash-present">0</span>
+        <span class="stat-card__l">Present</span>
+      </div>
+      <div class="stat-card stat-card--absent">
+        <span class="stat-card__n" id="dash-absent">0</span>
+        <span class="stat-card__l">Absent</span>
+      </div>
+      <div class="stat-card stat-card--leave">
+        <span class="stat-card__n" id="dash-leave">0</span>
+        <span class="stat-card__l">Leave</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="summary__bar" id="dash-bar" aria-hidden="true"></div>
+      <p class="dash__note" id="dash-today-note"></p>
+      <button class="btn btn--primary btn--block" id="dash-action" type="button" data-goes="attendance">
+        Take attendance
+      </button>
+    </div>
+
+    <div class="panel" id="dash-recent-card">
+      <div class="panel__head">
+        <h2 class="panel__title">Recent attendance</h2>
+        <button class="linkbtn" id="dash-all-records" type="button">View all</button>
+      </div>
+      <div id="dash-recent"></div>
+      <p class="hint" id="dash-recent-empty" hidden>No attendance has been saved yet.</p>
+    </div>
+
+  </section>
+
+  <!-- ================================================ Students ========== -->
+  <section class="screen" id="screen-students" aria-label="Students" hidden>
+
+    <div class="searchbar">
+      <svg class="searchbar__icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"></circle>
+        <line x1="16.5" y1="16.5" x2="21" y2="21"></line>
+      </svg>
+      <input class="searchbar__input" id="student-search" type="search" placeholder="Search name, roll, class or section"
+             autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Search students">
+      <button class="searchbar__clear" id="student-search-clear" type="button" aria-label="Clear search" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
+      </button>
+    </div>
+
+    <div class="list" id="student-list"></div>
+
+    <div class="empty" id="student-empty" hidden>
+      <div class="empty__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <line x1="19" y1="8" x2="19" y2="14"></line>
+          <line x1="22" y1="11" x2="16" y2="11"></line>
+        </svg>
+      </div>
+      <h2 class="empty__title" id="student-empty-title">No students yet</h2>
+      <p class="empty__text" id="student-empty-text">Tap Add to register your first student.</p>
+    </div>
+
+  </section>
+
+  <!-- ================================================ Attendance ======== -->
+  <section class="screen" id="screen-attendance" aria-label="Attendance" hidden>
+
+    <div class="panel">
+      <div class="grid2">
+        <div class="field field--tight">
+          <label class="label" for="a-class">Class</label>
+          <select class="input select" id="a-class"></select>
+        </div>
+        <div class="field field--tight">
+          <label class="label" for="a-section">Section</label>
+          <select class="input select" id="a-section"></select>
+        </div>
+      </div>
+      <div class="field field--tight field--last">
+        <label class="label" for="a-date">Date</label>
+        <input class="input" id="a-date" type="date">
+      </div>
+      <p class="note" id="a-note" hidden></p>
+    </div>
+
+    <div id="a-session" hidden>
+
+      <div class="counts" id="a-counts" aria-live="polite">
+        <div class="count count--present">
+          <span class="count__n" id="a-n-present">0</span>
+          <span class="count__l">Present</span>
+        </div>
+        <div class="count count--absent">
+          <span class="count__n" id="a-n-absent">0</span>
+          <span class="count__l">Absent</span>
+        </div>
+        <div class="count count--leave">
+          <span class="count__n" id="a-n-leave">0</span>
+          <span class="count__l">Leave</span>
+        </div>
+        <div class="count count--pending">
+          <span class="count__n" id="a-n-pending">0</span>
+          <span class="count__l">Not marked</span>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="searchbar searchbar--inline">
+          <svg class="searchbar__icon" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="16.5" y1="16.5" x2="21" y2="21"></line>
+          </svg>
+          <input class="searchbar__input" id="a-search" type="search" placeholder="Search roll or name"
+                 autocomplete="off" spellcheck="false" aria-label="Search students in this class">
+          <button class="searchbar__clear" id="a-search-clear" type="button" aria-label="Clear search" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
+          </button>
+        </div>
+        <button class="btn btn--soft btn--sm" id="a-all-present" type="button">Mark all present</button>
+      </div>
+
+      <div class="list" id="a-list"></div>
+
+      <div class="empty empty--tight" id="a-search-empty" hidden>
+        <h2 class="empty__title">No matching students</h2>
+        <p class="empty__text" id="a-search-empty-text"></p>
+      </div>
+
+    </div>
+
+    <div class="empty" id="a-empty" hidden>
+      <div class="empty__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="4" width="18" height="17" rx="2"></rect>
+          <line x1="3" y1="9" x2="21" y2="9"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <polyline points="9 14 11 16 15 12"></polyline>
+        </svg>
+      </div>
+      <h2 class="empty__title" id="a-empty-title">No students yet</h2>
+      <p class="empty__text" id="a-empty-text">Add students before taking attendance.</p>
+      <button class="btn btn--soft btn--sm" id="a-empty-action" type="button" hidden>Go to students</button>
+    </div>
+
+  </section>
+
+  <!-- ================================================ Records =========== -->
+  <section class="screen" id="screen-records" aria-label="Attendance records" hidden>
+
+    <div class="panel">
+      <div class="modes" role="tablist" aria-label="Report type">
+        <button class="mode is-active" id="r-mode-daily" type="button" role="tab" aria-selected="true">Daily</button>
+        <button class="mode" id="r-mode-monthly" type="button" role="tab" aria-selected="false">Monthly</button>
+      </div>
+
+      <div class="field field--tight" id="r-date-field">
+        <label class="label" for="r-date">Date</label>
+        <input class="input" id="r-date" type="date">
+      </div>
+
+      <div class="field field--tight" id="r-month-field" hidden>
+        <label class="label" for="r-month">Month</label>
+        <input class="input" id="r-month" type="month">
+      </div>
+
+      <div class="grid2 field--last">
+        <div class="field field--tight">
+          <label class="label" for="r-class">Class</label>
+          <select class="input select" id="r-class"></select>
+        </div>
+        <div class="field field--tight">
+          <label class="label" for="r-section">Section</label>
+          <select class="input select" id="r-section"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="searchbar">
+      <svg class="searchbar__icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"></circle>
+        <line x1="16.5" y1="16.5" x2="21" y2="21"></line>
+      </svg>
+      <input class="searchbar__input" id="r-search" type="search" placeholder="Search roll or name"
+             autocomplete="off" spellcheck="false" aria-label="Search records">
+      <button class="searchbar__clear" id="r-search-clear" type="button" aria-label="Clear search" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
+      </button>
+    </div>
+
+    <div class="summary" id="r-summary" hidden>
+      <p class="summary__school" id="r-summary-school"></p>
+      <p class="summary__title" id="r-summary-title"></p>
+      <div class="summary__bar" id="r-summary-bar" aria-hidden="true"></div>
+      <div class="summary__stats">
+        <span class="stat stat--present"><b id="r-s-present">0</b> Present</span>
+        <span class="stat stat--absent"><b id="r-s-absent">0</b> Absent</span>
+        <span class="stat stat--leave"><b id="r-s-leave">0</b> Leave</span>
+        <span class="stat stat--pct"><b id="r-s-pct">0%</b> attendance</span>
+      </div>
+      <button class="btn btn--soft btn--sm summary__export" id="r-export" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span id="r-export-label">Export to Excel</span>
+      </button>
+    </div>
+
+    <div class="list" id="r-list"></div>
+
+    <div class="empty" id="r-empty" hidden>
+      <div class="empty__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="8" y1="13" x2="16" y2="13"></line>
+          <line x1="8" y1="17" x2="13" y2="17"></line>
+        </svg>
+      </div>
+      <h2 class="empty__title" id="r-empty-title">No records</h2>
+      <p class="empty__text" id="r-empty-text"></p>
+    </div>
+
+  </section>
+
+  <!-- ================================================ Settings ========== -->
+  <section class="screen" id="screen-settings" aria-label="School settings" hidden>
+
+    <div class="brand-card">
+      <div class="brand__mark brand__mark--lg" id="settings-logo" aria-hidden="true"></div>
+      <p class="brand__name" id="settings-school">School</p>
+      <p class="brand__sub">School Attendance System</p>
+      <p class="brand__meta" id="settings-director"></p>
+      <p class="brand__meta" id="settings-username"></p>
+    </div>
+
+    <div class="panel">
+      <h2 class="panel__title">School profile</h2>
+      <form id="profile-form" novalidate>
+        <div class="field field--tight">
+          <label class="label" for="s-school">School name</label>
+          <input class="input" id="s-school" type="text" maxlength="80" autocapitalize="words" spellcheck="false">
+          <p class="error" id="se-schoolName" hidden></p>
+        </div>
+        <div class="field field--tight">
+          <label class="label" for="s-director">Director / owner name</label>
+          <input class="input" id="s-director" type="text" maxlength="80" autocapitalize="words" spellcheck="false">
+          <p class="error" id="se-directorName" hidden></p>
+        </div>
+        <button class="btn btn--primary btn--block" type="submit">Save profile</button>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2 class="panel__title">School logo</h2>
+      <div class="logo-row">
+        <div class="logo-preview logo-preview--lg" id="s-logo-preview" aria-hidden="true"></div>
+        <div class="logo-row__actions">
+          <input type="file" id="s-logo" accept="image/png,image/jpeg,image/webp" hidden>
+          <button class="btn btn--soft btn--sm" type="button" id="s-logo-pick">Upload logo</button>
+          <button class="btn btn--ghost btn--sm" type="button" id="s-logo-clear" hidden>Remove</button>
+        </div>
+      </div>
+      <p class="hint">PNG or JPG. Resized and stored on this device only.</p>
+      <p class="error" id="se-logo" hidden></p>
+    </div>
+
+    <div class="panel">
+      <h2 class="panel__title">Username</h2>
+      <form id="username-form" novalidate>
+        <div class="field field--tight">
+          <label class="label" for="s-username">New username</label>
+          <input class="input" id="s-username" type="text" maxlength="24" autocapitalize="none" spellcheck="false"
+                 autocomplete="username">
+          <p class="error" id="se-username" hidden></p>
+        </div>
+        <div class="field field--tight">
+          <label class="label" for="s-username-pw">Current password</label>
+          <input class="input" id="s-username-pw" type="password" maxlength="72" autocomplete="current-password">
+          <p class="error" id="se-currentPassword" hidden></p>
+        </div>
+        <button class="btn btn--primary btn--block" type="submit">Update username</button>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2 class="panel__title">Password</h2>
+      <form id="password-form" novalidate>
+        <div class="field field--tight">
+          <label class="label" for="s-current">Current password</label>
+          <input class="input" id="s-current" type="password" maxlength="72" autocomplete="current-password">
+          <p class="error" id="pe-currentPassword" hidden></p>
+        </div>
+        <div class="field field--tight">
+          <label class="label" for="s-new">New password</label>
+          <input class="input" id="s-new" type="password" maxlength="72" autocomplete="new-password"
+                 placeholder="At least 6 characters">
+          <p class="error" id="pe-password" hidden></p>
+        </div>
+        <div class="field field--tight">
+          <label class="label" for="s-confirm">Confirm new password</label>
+          <input class="input" id="s-confirm" type="password" maxlength="72" autocomplete="new-password">
+          <p class="error" id="pe-confirmPassword" hidden></p>
+        </div>
+        <button class="btn btn--primary btn--block" type="submit">Change password</button>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2 class="panel__title">Session</h2>
+      <button class="btn btn--danger btn--block" type="button" id="logout-btn">Log out</button>
+      <p class="hint">Your school data stays on this device. You will need your username and password to sign back in.</p>
+    </div>
+
+  </section>
+
+</main>
+
+<button class="fab" id="fab-add" type="button" aria-label="Add student">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+  <span>Add</span>
+</button>
+
+<div class="savebar" id="savebar" hidden>
+  <p class="savebar__info" id="savebar-info">Nothing to save yet</p>
+  <button class="btn btn--primary" id="a-save" type="button">Save attendance</button>
+</div>
+
+<nav class="tabbar" aria-label="Main">
+  <button class="tab is-active" type="button" data-screen="dashboard" aria-current="page">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3" y="3" width="7" height="9" rx="1"></rect>
+      <rect x="14" y="3" width="7" height="5" rx="1"></rect>
+      <rect x="14" y="12" width="7" height="9" rx="1"></rect>
+      <rect x="3" y="16" width="7" height="5" rx="1"></rect>
+    </svg>
+    <span>Home</span>
+  </button>
+  <button class="tab" type="button" data-screen="students">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+      <circle cx="9.5" cy="7" r="4"></circle>
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+    </svg>
+    <span>Students</span>
+  </button>
+  <button class="tab" type="button" data-screen="attendance">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="17" rx="2"></rect>
+      <line x1="3" y1="9" x2="21" y2="9"></line>
+      <line x1="8" y1="2" x2="8" y2="6"></line>
+      <line x1="16" y1="2" x2="16" y2="6"></line>
+      <polyline points="9 14 11 16 15 12"></polyline>
+    </svg>
+    <span>Attendance</span>
+  </button>
+  <button class="tab" type="button" data-screen="records">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+      <polyline points="14 2 14 8 20 8"></polyline>
+      <line x1="8" y1="13" x2="16" y2="13"></line>
+      <line x1="8" y1="17" x2="13" y2="17"></line>
+    </svg>
+    <span>Records</span>
+  </button>
+  <button class="tab" type="button" data-screen="settings">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"></path>
+    </svg>
+    <span>Settings</span>
+  </button>
+</nav>
+
+</div><!-- /#app-view -->
+
+<!-- ================================================== Overlays ========== -->
+<div class="backdrop" id="backdrop" hidden></div>
+
+<div class="sheet" id="student-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden>
+  <div class="sheet__grip" aria-hidden="true"></div>
+  <div class="sheet__head">
+    <h2 class="sheet__title" id="sheet-title">Add student</h2>
+    <button class="iconbtn" id="sheet-close" type="button" aria-label="Close">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
+    </button>
+  </div>
+
+  <form class="form" id="student-form" novalidate>
+    <input type="hidden" id="f-id">
+
+    <div class="field">
+      <label class="label" for="f-name">Student name <span class="req" aria-hidden="true">*</span></label>
+      <input class="input" id="f-name" type="text" placeholder="e.g. Ayesha Khan" maxlength="60"
+             autocomplete="off" autocapitalize="words" spellcheck="false"
+             aria-describedby="e-name" enterkeyhint="next">
+      <p class="error" id="e-name" hidden></p>
+    </div>
+
+    <div class="field">
+      <label class="label" for="f-father">Father name <span class="optional">optional</span></label>
+      <input class="input" id="f-father" type="text" placeholder="e.g. Imran Khan" maxlength="60"
+             autocomplete="off" autocapitalize="words" spellcheck="false"
+             aria-describedby="e-fatherName" enterkeyhint="next">
+      <p class="error" id="e-fatherName" hidden></p>
+    </div>
+
+    <div class="field">
+      <label class="label" for="f-roll">Roll number <span class="req" aria-hidden="true">*</span></label>
+      <input class="input" id="f-roll" type="text" inputmode="numeric" placeholder="e.g. 12" maxlength="12"
+             autocomplete="off" spellcheck="false" aria-describedby="e-roll" enterkeyhint="next">
+      <p class="error" id="e-roll" hidden></p>
+    </div>
+
+    <div class="grid2">
+      <div class="field">
+        <label class="label" for="f-class">Class <span class="req" aria-hidden="true">*</span></label>
+        <input class="input" id="f-class" type="text" list="dl-classes" placeholder="e.g. 5" maxlength="20"
+               autocomplete="off" spellcheck="false" aria-describedby="e-className" enterkeyhint="next">
+        <datalist id="dl-classes"></datalist>
+        <p class="error" id="e-className" hidden></p>
+      </div>
+
+      <div class="field">
+        <label class="label" for="f-section">Section <span class="req" aria-hidden="true">*</span></label>
+        <input class="input" id="f-section" type="text" list="dl-sections" placeholder="e.g. A" maxlength="10"
+               autocomplete="off" autocapitalize="characters" spellcheck="false"
+               aria-describedby="e-section" enterkeyhint="done">
+        <datalist id="dl-sections"></datalist>
+        <p class="error" id="e-section" hidden></p>
+      </div>
+    </div>
+
+    <div class="sheet__actions">
+      <button class="btn btn--ghost" id="sheet-cancel" type="button">Cancel</button>
+      <button class="btn btn--primary" id="sheet-save" type="submit">Save student</button>
+    </div>
+  </form>
+</div>
+
+<div class="sheet" id="detail-sheet" role="dialog" aria-modal="true" aria-labelledby="detail-name" hidden>
+  <div class="sheet__grip" aria-hidden="true"></div>
+  <div class="sheet__head">
+    <h2 class="sheet__title" id="detail-name">Student</h2>
+    <button class="iconbtn" id="detail-close" type="button" aria-label="Close">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
+    </button>
+  </div>
+
+  <dl class="detail">
+    <div class="detail__row">
+      <dt class="detail__k">Father name</dt>
+      <dd class="detail__v" id="detail-father">—</dd>
+    </div>
+    <div class="detail__row">
+      <dt class="detail__k">Roll number</dt>
+      <dd class="detail__v" id="detail-roll">—</dd>
+    </div>
+    <div class="detail__row">
+      <dt class="detail__k">Class</dt>
+      <dd class="detail__v" id="detail-class">—</dd>
+    </div>
+    <div class="detail__row">
+      <dt class="detail__k">Section</dt>
+      <dd class="detail__v" id="detail-section">—</dd>
+    </div>
+  </dl>
+
+  <h3 class="detail__heading">Attendance</h3>
+  <div class="statgrid statgrid--3">
+    <div class="stat-card stat-card--present">
+      <span class="stat-card__n" id="detail-present">0</span>
+      <span class="stat-card__l">Present</span>
+    </div>
+    <div class="stat-card stat-card--absent">
+      <span class="stat-card__n" id="detail-absent">0</span>
+      <span class="stat-card__l">Absent</span>
+    </div>
+    <div class="stat-card stat-card--leave">
+      <span class="stat-card__n" id="detail-leave">0</span>
+      <span class="stat-card__l">Leave</span>
+    </div>
+  </div>
+  <p class="detail__pct" id="detail-pct"></p>
+
+  <div class="sheet__actions">
+    <button class="btn btn--ghost" id="detail-edit" type="button">Edit student</button>
+    <button class="btn btn--primary" id="detail-done" type="button">Done</button>
+  </div>
+</div>
+
+<div class="dialog" id="confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" hidden>
+  <h2 class="dialog__title" id="confirm-title">Delete student?</h2>
+  <p class="dialog__text" id="confirm-text"></p>
+  <div class="dialog__actions">
+    <button class="btn btn--ghost" id="confirm-no" type="button">Cancel</button>
+    <button class="btn btn--danger" id="confirm-yes" type="button">Delete</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<!-- Both views above start hidden, so a script that throws before boot routes
+     to one of them leaves a blank screen — and on a phone there is no console
+     to find out why. Report it on the page instead. Registered first, so it
+     also covers the scripts below. -->
+<div class="startup-error" id="startup-error" role="alert" hidden>
+  <h1 class="startup-error__title">The app could not start</h1>
+  <p class="startup-error__text" id="startup-error-text"></p>
+  <p class="startup-error__hint">Your saved data has not been touched. Close the app and open it again.</p>
+</div>
+
+<script>
+(function (window, document) {
+  'use strict';
+  window.addEventListener('error', function (event) {
+    var view = document.getElementById('auth-view');
+    var app = document.getElementById('app-view');
+    // A failure after the app is on screen is the screen's problem, not a
+    // reason to replace a working session with an error page.
+    if ((view && !view.hidden) || (app && !app.hidden)) return;
+
+    var box = document.getElementById('startup-error');
+    var text = document.getElementById('startup-error-text');
+    if (!box || !text) return;
+    text.textContent = (event.message || 'Unknown error') +
+      (event.filename ? ' (' + String(event.filename).split('/').pop() +
+        (event.lineno ? ':' + event.lineno : '') + ')' : '');
+    box.hidden = false;
+  });
+}(window, document));
+</script>
+
+<script src="js/crypto.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/db.js"></script>
+<script src="js/export.js"></script>
+<script src="js/app.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/students.js"></script>
+<script src="js/attendance.js"></script>
+<script src="js/records.js"></script>
+<script src="js/settings.js"></script>
+</body>
+</html>

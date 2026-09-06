@@ -267,6 +267,10 @@
   }
 
   function signOut() {
+    // Drop the cloud session too, or the next person to open the app on this
+    // phone would still be holding the last school's Firebase credentials.
+    if (window.CloudSync) window.CloudSync.logout();
+
     Auth.logout();
     emit('account-changed', null);
     showAuth('login');
@@ -417,6 +421,7 @@
     }
 
     if (window.AuthUI) window.AuthUI.init();
+    if (window.CloudSync) window.CloudSync.init();
 
     /* Last resort. storage.js bounds each of its own steps, but a WebView that
        stalls somewhere unforeseen must still end up at a sign-in form rather
@@ -435,11 +440,16 @@
     window.SchoolDB.ready(function (status) {
       if (bootTimer) { window.clearTimeout(bootTimer); bootTimer = null; }
 
-      // A remembered session goes straight in; otherwise set up or sign in.
-      // This runs even if the failsafe above already showed a form, because
-      // only now is it known whether there is a session to restore.
+      /* A remembered session goes straight in; otherwise sign in.
+         This runs even if the failsafe above already showed a form, because
+         only now is it known whether there is a session to restore.
+
+         Sign-in is always the first screen, including on a device that holds
+         no account. With cloud accounts a school signs in on a phone that has
+         never seen it before, so "no local account" no longer means "nothing
+         to sign in to" — it usually means this is the teacher's second phone. */
       if (Auth.isSignedIn()) enterApp();
-      else showAuth(Auth.hasAccounts() ? 'login' : 'register');
+      else showAuth('login');
 
       if (!status.persistent) {
         toast('No storage available — nothing you enter will be kept.', 'error');

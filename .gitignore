@@ -8,3 +8,11 @@ Thumbs.db
 # Generated when the app is wrapped for Android
 /android/
 /ios/
+
+# Firebase emulator scratch output
+*-debug.log
+.firebase/
+
+# Downloaded working copy of the Firebase web config (the real one lives in
+# js/firebase-config.js and ships in the app)
+/my-config.txt

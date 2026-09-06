@@ -110,6 +110,24 @@ async function openApp(seed) {
       window.localStorage.clear();
       try { window.sessionStorage.clear(); } catch (err) { /* ignore */ }
 
+      /* Force cloud accounts OFF for every suite, whatever js/firebase-config.js
+         happens to hold.
+
+         Once the app is connected to a real project that file ships
+         `enabled: true`, and a suite that registers through the form would then
+         sign up against the live project — creating real accounts in it and
+         making the tests depend on a network. Locking the property means the
+         config file's own assignment is ignored (it is a plain script, so the
+         write silently fails) and the suites stay hermetic.
+
+         tests/cloud.js opts back in through SchoolCloud._config(), which sets
+         cloud.js's internal copy and does not go through this property. */
+      Object.defineProperty(window, 'SchoolCloudConfig', {
+        value: { enabled: false },
+        writable: false,
+        configurable: false
+      });
+
       // jsdom ships no IndexedDB, so a suite that wants the IndexedDB code
       // path supplies a factory (fake-indexeddb) here. Reusing one factory
       // across openApp calls models the same device being relaunched.

@@ -31,7 +31,7 @@
     <!-- ---------------------------------------------------- Register --- -->
     <form class="auth__form" id="register-form" novalidate hidden>
       <h1 class="auth__title">Set up your school</h1>
-      <p class="auth__lead">This creates the school account for this device. Everything stays on the device — nothing is sent anywhere.</p>
+      <p class="auth__lead">This creates your school’s account. You can then sign in to it from any phone, and the register stays on each device so it keeps working without a signal.</p>
 
       <div class="field">
         <label class="label" for="r-school">School name <span class="req" aria-hidden="true">*</span></label>
@@ -92,7 +92,7 @@
     <!-- ------------------------------------------------------- Login --- -->
     <form class="auth__form" id="login-form" novalidate hidden>
       <h1 class="auth__title">Sign in</h1>
-      <p class="auth__lead">Enter the school name or username for this device.</p>
+      <p class="auth__lead">Use your school&rsquo;s username and password. The same account works on every phone.</p>
 
       <div class="field">
         <label class="label" for="l-identifier">School name or username</label>
@@ -118,7 +118,7 @@
 
       <button class="btn btn--primary btn--block" type="submit" id="l-submit">Sign in</button>
 
-      <p class="auth__switch">Setting up another school? <button class="linkbtn" type="button" id="to-register">Create an account</button></p>
+      <p class="auth__switch">No account yet? <button class="linkbtn linkbtn--strong" type="button" id="to-register">Create an account</button></p>
     </form>
 
   </div>
@@ -212,6 +212,17 @@
              autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Search students">
       <button class="searchbar__clear" id="student-search-clear" type="button" aria-label="Clear search" hidden>
         <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
+      </button>
+    </div>
+
+    <div class="toolbar toolbar--end">
+      <button class="btn btn--ghost btn--sm" id="import-open" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Import from Excel
       </button>
     </div>
 
@@ -549,6 +560,68 @@
 <!-- ================================================== Overlays ========== -->
 <div class="backdrop" id="backdrop" hidden></div>
 
+<div class="sheet" id="import-sheet" role="dialog" aria-modal="true" aria-labelledby="import-title" hidden>
+  <div class="sheet__grip" aria-hidden="true"></div>
+  <div class="sheet__head">
+    <h2 class="sheet__title" id="import-title">Import students</h2>
+    <button class="iconbtn" id="import-close" type="button" aria-label="Close">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"></line><line x1="18" y1="6" x2="6" y2="18"></line></svg>
+    </button>
+  </div>
+
+  <!-- Step 1 — choose a file -->
+  <div id="import-step-pick">
+    <p class="import__lead">Choose an Excel file (.xlsx or .xls). The sheet needs a heading row with these columns:</p>
+    <ul class="import__cols">
+      <li><span class="import__col">Student Name</span> <em>required</em></li>
+      <li><span class="import__col">Father Name</span> <em>optional</em></li>
+      <li><span class="import__col">Roll Number</span> <em>required</em></li>
+      <li><span class="import__col">Class</span> <em>required</em></li>
+      <li><span class="import__col">Section</span> <em>required</em></li>
+    </ul>
+    <p class="import__note">Nothing is uploaded — the file is read on this device.</p>
+
+    <input type="file" id="import-file" accept=".xlsx,.xls,.xlsm,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" hidden>
+    <button class="btn btn--primary btn--block" id="import-choose" type="button">Choose file</button>
+    <p class="error" id="import-error" hidden></p>
+  </div>
+
+  <!-- Step 2 — preview and confirm -->
+  <div id="import-step-preview" hidden>
+    <p class="import__file" id="import-filename"></p>
+
+    <div class="import__counts" id="import-counts">
+      <span class="import__count import__count--ok"><b id="import-n-ok">0</b> to import</span>
+      <span class="import__count import__count--dup"><b id="import-n-dup">0</b> duplicate</span>
+      <span class="import__count import__count--bad"><b id="import-n-bad">0</b> with errors</span>
+    </div>
+
+    <div class="import__tablewrap">
+      <table class="import__table">
+        <thead>
+          <tr>
+            <th scope="col">Row</th>
+            <th scope="col">Name</th>
+            <th scope="col">Father</th>
+            <th scope="col">Roll</th>
+            <th scope="col">Class</th>
+            <th scope="col">Sec</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody id="import-rows"></tbody>
+      </table>
+    </div>
+
+    <p class="import__note" id="import-skipnote" hidden></p>
+
+    <div class="sheet__actions">
+      <button class="btn btn--ghost" id="import-back" type="button">Choose another</button>
+      <button class="btn btn--primary" id="import-commit" type="button">Import</button>
+    </div>
+  </div>
+</div>
+
 <div class="sheet" id="student-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden>
   <div class="sheet__grip" aria-hidden="true"></div>
   <div class="sheet__head">
@@ -707,6 +780,10 @@
 <script src="js/storage.js"></script>
 <script src="js/db.js"></script>
 <script src="js/export.js"></script>
+<script src="js/import.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/cloud.js"></script>
+<script src="js/cloud-sync.js"></script>
 <script src="js/app.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/dashboard.js"></script>

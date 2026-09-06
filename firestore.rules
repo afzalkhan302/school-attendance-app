@@ -1,0 +1,45 @@
+/* Firestore security rules for the School Attendance app.
+
+   THESE ARE THE THING THAT KEEPS ONE SCHOOL OUT OF ANOTHER SCHOOL'S DATA.
+   The client code cannot enforce it — anyone can send whatever requests they
+   like to the database. Until these are published, any signed-in user can read
+   every school on the project.
+
+   Publish them:
+     Firebase console > Firestore Database > Rules > paste this file > Publish
+
+   Or with the CLI:
+     firebase deploy --only firestore:rules
+
+   The model is one document tree per account, keyed by the Firebase Auth uid:
+
+     schools/{uid}                     the school's own details
+     schools/{uid}/students/{id}
+     schools/{uid}/attendance/{studentId|date}
+
+   Because the path itself contains the uid, isolation is structural: there is
+   no query a signed-in teacher can write that reaches another uid's subtree.
+*/
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /schools/{uid} {
+
+      // Only the signed-in owner of this uid, and only for their own document.
+      allow read, write: if request.auth != null
+                         && request.auth.uid == uid;
+
+      // Same rule for everything filed underneath it: students, attendance,
+      // and anything added later.
+      match /{document=**} {
+        allow read, write: if request.auth != null
+                           && request.auth.uid == uid;
+      }
+    }
+
+    // Anything not matched above is denied. Do not add a catch-all.
+  }
+}

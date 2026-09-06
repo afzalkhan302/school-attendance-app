@@ -123,6 +123,11 @@
   }
 
   function render() {
+    /* Rendering is no longer only ever triggered by this screen: a sync from
+       another device, or a save settling, can call it at any moment — including
+       after the window has gone away. Nothing to draw on is not an error. */
+    if (!el.list || !el.count || !el.search) return;
+
     var all = DB.all();
     var term = el.search.value;
     var rows = DB.search(all, term);
@@ -295,6 +300,167 @@
     });
   }
 
+  /* --------------------------------------------------- import from Excel */
+
+  /* The parsed-and-checked file, held between the preview and the Import tap.
+     Null whenever the sheet is not showing a preview. */
+  var prepared = null;
+
+  var STATUS_LABELS = { ok: 'Will import', duplicate: 'Duplicate', invalid: 'Error' };
+
+  function showImportStep(step) {
+    imp.pick.hidden = step !== 'pick';
+    imp.preview.hidden = step !== 'preview';
+  }
+
+  function importError(message) {
+    imp.error.textContent = message || '';
+    imp.error.hidden = !message;
+  }
+
+  function openImport() {
+    prepared = null;
+    imp.file.value = '';
+    importError('');
+    showImportStep('pick');
+    window.UI.showOverlay(imp.sheet, function () { prepared = null; });
+  }
+
+  function chooseFile(event) {
+    var file = event.target.files && event.target.files[0];
+    event.target.value = '';   // let the same file be picked again after a fix
+    if (!file) return;
+
+    importError('');
+    imp.choose.disabled = true;
+    imp.choose.textContent = 'Reading…';
+
+    window.SchoolImport.readFile(file, function (result) {
+      imp.choose.disabled = false;
+      imp.choose.textContent = 'Choose file';
+
+      if (!result.ok) { importError(result.error); return; }
+
+      prepared = window.SchoolImport.prepare(result.rows);
+      renderPreview(file.name, result);
+      showImportStep('preview');
+    });
+  }
+
+  function renderPreview(filename, parsed) {
+    var counts = prepared.counts;
+
+    imp.filename.textContent = filename + ' — sheet “' + parsed.sheetName + '”, ' +
+      counts.total + ' row' + (counts.total === 1 ? '' : 's');
+
+    imp.nOk.textContent = String(counts.ok);
+    imp.nDup.textContent = String(counts.duplicate);
+    imp.nBad.textContent = String(counts.invalid);
+
+    imp.skipnote.hidden = !parsed.truncated;
+    if (parsed.truncated) {
+      imp.skipnote.textContent = 'Only the first ' + counts.total + ' rows were read.';
+    }
+
+    imp.rows.textContent = '';
+    var fragment = document.createDocumentFragment();
+
+    prepared.rows.forEach(function (row) {
+      var tr = document.createElement('tr');
+      tr.className = 'import__row import__row--' + row.status;
+
+      [String(row.line), row.values.name, row.values.fatherName,
+       row.values.roll, row.values.className, row.values.section].forEach(function (value) {
+        var td = document.createElement('td');
+        td.textContent = value || '—';
+        tr.appendChild(td);
+      });
+
+      var status = document.createElement('td');
+      status.className = 'import__status';
+      status.textContent = STATUS_LABELS[row.status];
+      // The reason belongs where the teacher is already looking.
+      if (row.note) status.title = row.note;
+      tr.appendChild(status);
+
+      fragment.appendChild(tr);
+
+      if (row.note) {
+        var noteRow = document.createElement('tr');
+        noteRow.className = 'import__noterow';
+        var note = document.createElement('td');
+        note.colSpan = 7;
+        note.textContent = row.note;
+        noteRow.appendChild(note);
+        fragment.appendChild(noteRow);
+      }
+    });
+
+    imp.rows.appendChild(fragment);
+
+    imp.commit.disabled = counts.ok === 0;
+    imp.commit.textContent = counts.ok === 0
+      ? 'Nothing to import'
+      : 'Import ' + counts.ok + ' student' + (counts.ok === 1 ? '' : 's');
+  }
+
+  function commitImport() {
+    if (!prepared || !prepared.counts.ok) return;
+
+    var snapshot = prepared;
+    imp.commit.disabled = true;
+    imp.commit.textContent = 'Importing…';
+
+    var result = window.SchoolImport.commit(snapshot);
+
+    window.UI.closeOverlay();
+    render();
+    refreshSuggestions();
+
+    // Nothing is claimed until the write has actually reached the disk.
+    window.UI.afterSave(function () {
+      window.UI.emit('students-changed');
+
+      var skipped = snapshot.counts.duplicate + snapshot.counts.invalid;
+      window.UI.toast(result.imported.length + ' student' +
+        (result.imported.length === 1 ? '' : 's') + ' imported' +
+        (skipped ? ', ' + skipped + ' skipped' : ''));
+    }, function () {
+      render();
+      refreshSuggestions();
+    });
+  }
+
+  var imp = {};
+
+  function initImport() {
+    imp.sheet = $('import-sheet');
+    imp.pick = $('import-step-pick');
+    imp.preview = $('import-step-preview');
+    imp.file = $('import-file');
+    imp.choose = $('import-choose');
+    imp.error = $('import-error');
+    imp.filename = $('import-filename');
+    imp.rows = $('import-rows');
+    imp.commit = $('import-commit');
+    imp.skipnote = $('import-skipnote');
+    imp.nOk = $('import-n-ok');
+    imp.nDup = $('import-n-dup');
+    imp.nBad = $('import-n-bad');
+
+    $('import-open').addEventListener('click', openImport);
+    $('import-close').addEventListener('click', window.UI.closeOverlay);
+    $('import-back').addEventListener('click', function () {
+      prepared = null;
+      importError('');
+      showImportStep('pick');
+    });
+
+    imp.choose.addEventListener('click', function () { imp.file.click(); });
+    imp.file.addEventListener('change', chooseFile);
+    imp.commit.addEventListener('click', commitImport);
+  }
+
   /* --------------------------------------------------------------- detail */
 
   /** Read-only view of one student, with their attendance history tallied. */
@@ -442,11 +608,24 @@
       refreshSuggestions();
     });
 
+    /* The register can also change without this screen doing it — a sync from
+       another device. Re-rendering here is what makes that visible; edits made
+       on this screen have already rendered, and a second pass is harmless. */
+    window.UI.on('students-changed', function () {
+      render();
+      refreshSuggestions();
+    });
+
+    initImport();
+
     render();
     refreshSuggestions();
   }
 
-  window.StudentsUI = { init: init, render: render, openDetail: openDetail };
+  window.StudentsUI = {
+    init: init, render: render, openDetail: openDetail,
+    openImport: openImport, importState: function () { return prepared; }
+  };
 
   /* app.js calls init() from its own DOMContentLoaded handler, which is
      registered first and therefore runs first. This is the fallback for when

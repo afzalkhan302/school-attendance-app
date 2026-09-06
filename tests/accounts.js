@@ -138,8 +138,11 @@ describe('registration', function () {
     equal(account.password, undefined);
     equal(account.passwordHash, undefined);
     equal(account.salt, undefined);
+    // cloudUid is empty for a local-only school; it says whether this account
+    // has a Firebase copy, and never carries anything secret.
     deepEqual(Object.keys(db.Auth.accounts()[0]).sort(),
-      ['createdAt', 'directorName', 'id', 'logo', 'schoolName', 'updatedAt', 'username']);
+      ['cloudUid', 'createdAt', 'directorName', 'id', 'logo', 'schoolName', 'updatedAt', 'username']);
+    equal(db.Auth.accounts()[0].cloudUid, '', 'a local account has no cloud id');
   });
 
   it('does not store the password as plain text', function () {

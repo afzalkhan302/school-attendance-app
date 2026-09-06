@@ -57,7 +57,31 @@ function build() {
     throw new Error('index.html references files that are not in the build: ' + missing.join(', '));
   }
 
-  return { files: files, refs: refs.length };
+  /* These are fetched at runtime rather than named in index.html, so nothing
+     above would notice one going missing — the failure would first appear on a
+     teacher's phone as an import or a sign-in that does not work. */
+  var lazy = collectLazyRefs();
+  var absent = lazy.filter(function (ref) { return !fs.existsSync(path.join(OUT, ref)); });
+  if (absent.length) {
+    throw new Error('lazily-loaded files are not in the build: ' + absent.join(', '));
+  }
+
+  return { files: files, refs: refs.length, lazy: lazy.length };
+}
+
+/** Paths the JS loads by hand at runtime, e.g. 'js/vendor/xlsx.full.min.js'. */
+function collectLazyRefs() {
+  var found = {};
+  var dir = path.join(ROOT, 'js');
+
+  fs.readdirSync(dir).forEach(function (name) {
+    if (!/\.js$/.test(name)) return;
+    var source = fs.readFileSync(path.join(dir, name), 'utf8');
+    var matches = source.match(/'js\/vendor\/[A-Za-z0-9._-]+\.js'/g) || [];
+    matches.forEach(function (match) { found[match.slice(1, -1)] = true; });
+  });
+
+  return Object.keys(found).sort();
 }
 
 if (require.main === module) {
@@ -65,6 +89,7 @@ if (require.main === module) {
   console.log('build ok  ->  www/');
   console.log('  ' + result.files + ' files copied');
   console.log('  ' + result.refs + ' local script/style references all resolve');
+  console.log('  ' + result.lazy + ' lazily-loaded vendor files present');
 }
 
 module.exports = { build: build, OUT: OUT };

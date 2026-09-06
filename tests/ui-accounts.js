@@ -41,15 +41,44 @@ async function main() {
 
   var page = await openApp({ account: null });
 
-  await it('opens on the setup screen, not the app', async function () {
+  await it('opens on the sign-in screen, not the app', async function () {
     equal(page.authVisible(), true, 'auth view should show');
     equal(page.appVisible(), false, 'the app is hidden until there is an account');
-    equal(page.registerVisible(), true, 'setup form');
-    equal(page.loginVisible(), false);
+    /* Sign-in comes first even on a device holding no account: with cloud
+       accounts this is usually the teacher's second phone, and the school
+       already exists somewhere else. */
+    equal(page.loginVisible(), true, 'sign-in form');
+    equal(page.registerVisible(), false, 'not the setup form');
   });
 
-  await it('does not offer to sign in when there is nothing to sign in to', async function () {
-    equal(page.$('#to-login').parentNode.hidden, true);
+  await it('offers a way to create an account from the sign-in screen', async function () {
+    var link = page.$('#to-register');
+    assert(link, 'the control exists');
+    equal(link.parentNode.hidden, false, 'and it is visible');
+    assert(/create an account/i.test(link.textContent), link.textContent);
+  });
+
+  await it('that control switches to the setup form and back', async function () {
+    page.$('#to-register').click();
+    equal(page.registerVisible(), true, 'setup form opened');
+    equal(page.loginVisible(), false);
+
+    page.$('#to-login').click();
+    equal(page.loginVisible(), true, 'and back to sign-in');
+    equal(page.registerVisible(), false);
+  });
+
+  await it('leaves the setup form reachable for the rest of these tests', async function () {
+    page.$('#to-register').click();
+    equal(page.registerVisible(), true);
+  });
+
+  await it('still offers sign-in from the setup form, even with no local account', async function () {
+    /* This used to be hidden on a device holding no account, on the grounds
+       that there was nothing to sign in to. Cloud accounts made that false —
+       the school may exist on another phone — and hiding it would strand a
+       teacher on the setup form with no way back. */
+    equal(page.$('#to-login').parentNode.hidden, false);
   });
 
   await it('flags every required field on an empty submit', async function () {
@@ -542,6 +571,8 @@ async function main() {
       ]
     });
 
+    equal(upgrade.loginVisible(), true, 'sign-in first, as everywhere else');
+    upgrade.$('#to-register').click();
     equal(upgrade.registerVisible(), true);
     upgrade.doRegister(SCHOOL_A);
 

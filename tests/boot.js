@@ -89,7 +89,7 @@ async function main() {
     page.close();
   });
 
-  await it('shows the setup form on a blank device rather than nothing', async function () {
+  await it('shows the sign-in form on a blank device rather than nothing', async function () {
     var page = await openApp({
       account: null,
       indexedDB: factoryOpening(databaseThatReads(function (transaction) {
@@ -98,7 +98,7 @@ async function main() {
     });
 
     equal(page.authVisible(), true, 'an auth screen is on display');
-    equal(page.registerVisible(), true);
+    equal(page.loginVisible(), true, 'sign-in first, even with no local account');
     equal(page.appVisible(), false, 'and nobody was let in without signing in');
     page.close();
   });
@@ -204,6 +204,23 @@ async function main() {
       'the root still refuses sideways scrolling');
     assert(!/^html,\s*body\s*\{[^}]*overflow-x:\s*hidden/m.test(text),
       'but the body is no longer a scroll container too');
+    page.close();
+  });
+
+  await it('does not redefine a shared layout class further down the file', async function () {
+    var page = await openApp();
+    var css = page.document.querySelector('link[rel=stylesheet]');
+    var text = await (await fetch(css.href)).text();
+
+    /* A second `.toolbar { }` block later in the file silently retunes every
+       toolbar already using it — which is how the attendance search bar lost
+       its spacing when the students screen borrowed the name. Variants belong
+       on a modifier. */
+    ['.toolbar', '.searchbar', '.list', '.panel', '.counts', '.card'].forEach(function (name) {
+      var blocks = text.match(new RegExp('^\\' + name + '\\s*\\{', 'gm')) || [];
+      equal(blocks.length, 1, name + ' is defined exactly once, not ' + blocks.length + ' times');
+    });
+
     page.close();
   });
 

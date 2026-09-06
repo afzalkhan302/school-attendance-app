@@ -1250,6 +1250,20 @@ svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width:
   cursor: pointer;
 }
 
+/* Sign-in is the first screen now, so for anyone without an account yet the
+   way out of it has to be obvious rather than a footnote. */
+.linkbtn--strong {
+  display: inline-block;
+  margin-top: 2px;
+  padding: 7px 14px;
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  text-decoration: none;
+  line-height: 1.2;
+}
+
+.linkbtn--strong:active { background: var(--primary-soft); }
+
 .btn--block { width: 100%; margin-top: 6px; }
 
 .optional {
@@ -1479,6 +1493,112 @@ body { max-width: 100%; }
   overflow-wrap: anywhere;
 }
 
+/* ========================================================================== */
+/* Excel import                                                               */
+/* ========================================================================== */
+
+/* A toolbar holding one right-aligned button, rather than the attendance
+   screen's search-bar-plus-button. Scoped to its own modifier: redefining
+   plain .toolbar here would silently retune the attendance layout, which is
+   exactly what it did before this was scoped. */
+.toolbar--end {
+  justify-content: flex-end;
+  margin: 6px 14px 2px;
+}
+
+.toolbar--end .btn svg { width: 16px; height: 16px; flex: none; margin-right: 6px; }
+
+.import__lead { margin: 4px 0 12px; font-size: .8125rem; color: var(--text-muted); }
+
+.import__cols {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  list-style: none;
+  font-size: .8125rem;
+}
+
+.import__cols li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+.import__col { font-weight: 600; }
+.import__cols em { font-style: normal; font-size: .75rem; color: var(--text-muted); }
+
+.import__note { margin: 10px 0 0; font-size: .75rem; color: var(--text-muted); }
+
+.import__file {
+  margin: 4px 0 12px;
+  font-size: .8125rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.import__counts { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+
+.import__count {
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: .75rem;
+  font-weight: 600;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.import__count b { font-variant-numeric: tabular-nums; }
+.import__count--ok  { color: var(--present); }
+.import__count--dup { color: var(--leave); }
+.import__count--bad { color: var(--absent); }
+
+/* The table is the one thing here that legitimately scrolls sideways, so it
+   carries its own scroller rather than widening the page. */
+.import__tablewrap {
+  max-height: 46vh;
+  max-height: 46dvh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.import__table { width: 100%; border-collapse: collapse; font-size: .75rem; }
+
+.import__table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 8px 8px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: .6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.import__table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.import__row--duplicate td, .import__row--invalid td { color: var(--text-muted); }
+.import__status { white-space: nowrap; font-weight: 600; }
+.import__row--ok        .import__status { color: var(--present); }
+.import__row--duplicate .import__status { color: var(--leave); }
+.import__row--invalid   .import__status { color: var(--absent); }
+
+.import__noterow td {
+  padding: 0 8px 7px;
+  border-bottom: 1px solid var(--border);
+  font-size: .6875rem;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
 /* Shown only when a script throws before either view is on screen. */
 .startup-error {
   position: fixed;
@@ -1496,7 +1616,7 @@ body { max-width: 100%; }
   margin: 0 0 14px;
   padding: 10px 12px;
   border-radius: 10px;
-  background: var(--surface-2, rgba(127, 127, 127, .12));
+  background: var(--surface-2);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: .8125rem;
   overflow-wrap: anywhere;

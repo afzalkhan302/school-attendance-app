@@ -39,9 +39,9 @@ async function main() {
 
   var page = await openApp({ account: null, indexedDB: deviceDB });
 
-  await it('opens the setup screen once IndexedDB is ready', async function () {
+  await it('opens the sign-in screen once IndexedDB is ready', async function () {
     equal(page.authVisible(), true);
-    equal(page.registerVisible(), true);
+    equal(page.loginVisible(), true);
   });
 
   await it('reports IndexedDB as the backend', async function () {

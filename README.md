@@ -15,6 +15,8 @@ with Capacitor later without a rewrite.
 | 5 | Local storage | **Done** |
 | 6 | Mobile UI | **Done** |
 | 7 | Android platform (Capacitor) | **Done** |
+| 8 | Excel student import | **Done** |
+| 9 | Cloud accounts, multi-device sync | **Done** — verified on the Firebase emulator; needs your project to go live (`FIREBASE-SETUP.md`) |
 
 ## Running it
 
@@ -29,7 +31,7 @@ there is no build step.
 ## Tests
 
 ```bash
-npm test                    # everything (454 tests)
+npm test                    # everything (518 tests)
 
 npm run test:model          # student model + father name
 npm run test:attendance     # attendance model, dates, dashboard aggregates
@@ -37,12 +39,22 @@ npm run test:accounts       # accounts, sign-in, isolation, hashing
 npm run test:export         # daily and monthly Excel sheets
 npm run test:storage        # IndexedDB, migration, write failures
 npm run test:boot           # boot resilience, scroll lock
+npm run test:import         # Excel parsing, validation, duplicates
+npm run test:cloud          # cloud accounts across two devices
+npm run test:ui-import      # the import screen, in jsdom
 npm run test:ui             # students screen, in jsdom
 npm run test:ui-attendance  # attendance + records screens, in jsdom
 npm run test:ui-accounts    # setup, sign-in, settings, isolation, in jsdom
 npm run test:ui-dashboard   # dashboard, father name, details, export, in jsdom
 npm run test:ui-storage     # IndexedDB through the real UI, in jsdom
+
+npm run verify:firebase     # 46 checks against the real Firebase emulator
 ```
+
+`verify:firebase` is separate from `npm test` because it starts the Firebase
+emulator (which needs Java). It runs `tests/rules.js` and `tests/firebase-live.js`
+against Google's own Auth and Firestore builds and the real rules engine —
+nothing mocked, and nothing that touches a live project. See `FIREBASE-SETUP.md`.
 
 `jsdom` and `fake-indexeddb` are devDependencies used only by the tests —
 neither Node nor jsdom ships an IndexedDB, so the suites inject one to
@@ -51,8 +63,15 @@ exercise the real code path.
 The UI suites serve the real `index.html` over HTTP and drive it in jsdom, so
 the actual markup, script order and event wiring are exercised.
 
-`jsdom` is a devDependency used only by the tests. The app itself has zero
-dependencies and never touches the network.
+The app has **no npm runtime dependencies and no build step for its own code**.
+Two libraries are vendored in `js/vendor/` (SheetJS for reading Excel, the
+Firebase SDK for cloud accounts); both are loaded lazily, so a school that never
+imports a spreadsheet and never turns on cloud accounts downloads and parses
+neither. See `js/vendor/README.md` for versions and provenance.
+
+**The app touches the network only when cloud accounts are switched on.** Left
+off, it behaves exactly as it always has: everything on the device, nothing
+sent anywhere.
 
 ## Layout
 
@@ -70,7 +89,15 @@ js/students.js    students screen and the student detail view
 js/attendance.js  attendance marking screen
 js/records.js     daily and monthly attendance reports + export
 js/settings.js    school profile, credentials, logo, logout
+js/import.js      reads an Excel workbook into validated student rows
+js/cloud.js       optional Firebase auth + Firestore replica
+js/cloud-sync.js  joins the cloud to the app: merge in, push out
+js/firebase-config.js   YOUR project keys (empty = cloud off)
+js/vendor/        SheetJS and the Firebase SDK, loaded on demand
+firestore.rules   security rules — deploy these or schools can read each other
 tools/serve.js    dev-only static server
+tools/build.js    assembles www/ for Capacitor
+tools/apk.js      build + sync + gradlew assembleDebug
 tests/            model tests and UI tests
 ```
 
@@ -291,6 +318,98 @@ Both filter by class and section and search by name or roll.
 
 **Settings** — change school name, director, username (needs the password),
 password (needs the current one), logo, and log out.
+
+## Importing students from Excel
+
+*Students > Import from Excel.* Takes `.xlsx` and `.xls`. The sheet needs a
+heading row naming **Student Name**, **Roll Number**, **Class** and **Section**;
+**Father Name** is optional, as it is everywhere else.
+
+Headings are matched loosely — `Roll No.`, `roll_number` and `RollNumber` all
+land on the same field — and a title row or two above the headings is fine.
+Numeric cells become text, so a roll typed as a number still reads as `7`.
+
+Nothing is written until the preview is confirmed. Every row is shown with its
+verdict:
+
+- **Will import** — good.
+- **Duplicate** — that roll number is already used in that class and section,
+  either by a student on file or by an earlier row in the same file. The first
+  occurrence wins and the rest are reported, never silently merged.
+- **Error** — a required field is missing or too short, with the reason.
+
+Importing writes the good rows through the same `Students.create` the Add
+Student form uses, so there is no second, weaker way into the register. Manual
+Add Student is unchanged.
+
+The file is read in the page with `FileReader`. It is never uploaded.
+
+## Cloud accounts (optional)
+
+Off by default. Filling in `js/firebase-config.js` turns on one account that
+works on any number of phones — the setup steps are in that file, and the
+security rules to deploy are in `firestore.rules`.
+
+**The local store stays the source of every read.** Firestore is a replica, so
+every screen, and the whole offline story, is unchanged:
+
+```
+sign in  ->  Firebase Auth checks the password
+             the school is pulled down and merged into the local store
+             the app carries on reading locally, exactly as before
+change   ->  saved locally first, then mirrored up
+remote   ->  a snapshot listener merges the change in and re-renders
+```
+
+- **Usernames** become addresses (`abc_admin@users.school-attendance.app`)
+  because Firebase Auth identifies accounts by email. Nothing is delivered
+  there; it only has to be valid and the same on every device. Firebase then
+  enforces username uniqueness for free.
+- **Isolation is structural.** Everything lives under `schools/{uid}/…` and the
+  rules allow a request only where `request.auth.uid == uid`. There is no query
+  a signed-in teacher can write that reaches another school.
+- **A pull is a merge, not an overwrite.** The last agreed state is kept as a
+  common ancestor, so a row missing from an incoming snapshot is recognised as
+  *deleted elsewhere* only if the cloud previously had it — otherwise it is
+  something this phone added and has not pushed yet, and it survives. Without
+  that, a snapshot arriving before the first push wipes unsynced work.
+- **Offline:** a device that has signed in before signs in again with no signal,
+  from the local copy. Creating a *new* account needs a connection, and says so.
+- **Conflicts** are last-write-wins per document. Two phones editing different
+  students merge cleanly; two phones editing the same student, the later write
+  wins.
+
+### How it was verified
+
+`npm run verify:firebase` runs 46 checks against the **Firebase emulator** —
+Google's Auth and Firestore, running the real rules engine. `tests/rules.js`
+attacks the isolation directly: as one authenticated school, every read, write,
+overwrite, delete and listing aimed at another school, plus unauthenticated
+access. `tests/firebase-live.js` drives the real `js/cloud.js` through register,
+sign-in on a second device, sync both ways, deletion propagation, wrong
+passwords, duplicate usernames, and offline queueing via Firestore's own
+`disableNetwork` / `enableNetwork`.
+
+The `tests/cloud.js` suite with its in-memory double is kept as well — it runs
+in `npm test` without needing Java or the emulator, and covers the UI wiring
+that the live tests do not reach.
+
+### What is not done
+
+- **The app is not connected to a live Firebase project yet.** `js/firebase-config.js`
+  is empty, so cloud accounts are off and the app runs device-only. Creating the
+  project, copying the keys and publishing the rules need a Google account:
+  `FIREBASE-SETUP.md` has the steps.
+- No password reset — that needs email, and usernames here are synthetic
+  addresses. Changing a password still works from Settings on a signed-in device.
+- Existing device-only schools are not uploaded automatically. They keep working
+  locally; there is no migrate-to-cloud button yet.
+- **This has been tested against a fake Firebase, not a real project.** The
+  suite in `tests/cloud.js` runs two jsdom devices against one in-memory backend
+  and covers register, sign-in, pull, push, delete propagation, isolation
+  between schools, wrong passwords and offline behaviour — but the real SDK,
+  real security rules and real latency have not been exercised. Try it on two
+  phones before relying on it.
 
 ## Android
 

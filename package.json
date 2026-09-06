@@ -7,9 +7,9 @@
     "start": "node tools/serve.js",
     "build": "node tools/build.js",
     "android:sync": "node tools/build.js && npx cap sync android",
-    "android:apk": "node tools/build.js && npx cap sync android && cd android && gradlew.bat assembleDebug",
+    "android:apk": "node tools/apk.js",
     "android:open": "npx cap open android",
-    "test": "node tests/run.js && node tests/attendance.js && node tests/accounts.js && node tests/export.js && node tests/storage.js && node tests/boot.js && node tests/ui.js && node tests/ui-attendance.js && node tests/ui-accounts.js && node tests/ui-dashboard.js && node tests/ui-storage.js",
+    "test": "node tests/run.js && node tests/attendance.js && node tests/accounts.js && node tests/export.js && node tests/storage.js && node tests/boot.js && node tests/import.js && node tests/cloud.js && node tests/ui.js && node tests/ui-attendance.js && node tests/ui-accounts.js && node tests/ui-dashboard.js && node tests/ui-storage.js && node tests/ui-import.js",
     "test:model": "node tests/run.js",
     "test:storage": "node tests/storage.js",
     "test:boot": "node tests/boot.js",
@@ -20,7 +20,18 @@
     "test:ui": "node tests/ui.js",
     "test:ui-attendance": "node tests/ui-attendance.js",
     "test:ui-accounts": "node tests/ui-accounts.js",
-    "test:ui-dashboard": "node tests/ui-dashboard.js"
+    "test:ui-dashboard": "node tests/ui-dashboard.js",
+    "test:import": "node tests/import.js",
+    "test:ui-import": "node tests/ui-import.js",
+    "test:cloud": "node tests/cloud.js",
+    "emulators": "node node_modules/firebase-tools/lib/bin/firebase.js emulators:start --project demo-school-attendance",
+    "test:rules": "node tests/rules.js",
+    "test:firebase": "node tests/firebase-live.js",
+    "verify:firebase": "node node_modules/firebase-tools/lib/bin/firebase.js emulators:exec --project demo-school-attendance \"node tests/rules.js && node tests/firebase-live.js\"",
+    "connect:firebase": "node tools/connect-firebase.js",
+    "deploy:rules": "node node_modules/firebase-tools/lib/bin/firebase.js deploy --only firestore:rules",
+    "verify:deployed": "node tests/rules-live.js",
+    "check:auth": "node tools/check-auth.js"
   },
   "keywords": [
     "attendance",
@@ -31,7 +42,9 @@
   "license": "UNLICENSED",
   "devDependencies": {
     "@capacitor/cli": "^8.5.1",
+    "@firebase/rules-unit-testing": "^5.0.2",
     "fake-indexeddb": "^6.2.5",
+    "firebase-tools": "^14.27.0",
     "jsdom": "^29.1.1"
   },
   "dependencies": {

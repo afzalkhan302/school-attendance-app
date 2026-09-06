@@ -120,25 +120,28 @@
       logo: pendingLogo
     };
 
-    var result = Auth.register(payload);
-
-    if (!result.ok) {
-      showErrors('re-', REGISTER_FIELDS, result.errors);
+    /* Validated locally first, so a bad form is caught without a round trip
+       and the field-level messages are the same either way. */
+    var check = Auth.validate(payload, null, {});
+    if (!check.valid) {
+      showErrors('re-', REGISTER_FIELDS, check.errors);
       return;
     }
 
-    // The account must actually be on disk before anyone is signed into it.
-    window.UI.afterSave(function () {
-      // Registering does not create a session on its own, so sign the new
-      // school straight in rather than making them retype what they chose.
-      var signIn = Auth.login(payload.username, payload.password, true);
-      if (!signIn.ok) {
-        window.UI.toast('Account created. Please sign in.', 'error');
-        show('login');
-        el.identifier.value = payload.username;
+    busy(el.registerSubmit, true, 'Creating…');
+
+    /* CloudSync creates the account in the cloud first when cloud accounts are
+       switched on, and signs in locally either way. With them off this is the
+       same local register + login as before. */
+    window.CloudSync.register(payload, function (result) {
+      busy(el.registerSubmit, false);
+
+      if (!result.ok) {
+        showErrors('re-', REGISTER_FIELDS, result.errors);
         return;
       }
 
+      // The account must actually be on disk before anyone is let in.
       window.UI.afterSave(function () {
         resetForms();
         window.UI.enterApp();
@@ -152,23 +155,48 @@
   function submitLogin(event) {
     event.preventDefault();
 
-    var result = Auth.login(el.identifier.value, el.loginPassword.value, el.remember.checked);
+    busy(el.loginSubmit, true, 'Signing in…');
 
-    if (!result.ok) {
-      showErrors('le-', LOGIN_FIELDS, result.errors);
+    /* With cloud accounts on, this checks Firebase first so the same username
+       and password work on a phone that has never seen this school — and falls
+       back to the local check when there is no signal. With them off it is the
+       same local sign-in as before. */
+    window.CloudSync.login(
+      el.identifier.value, el.loginPassword.value, el.remember.checked,
+      function (result) {
+        busy(el.loginSubmit, false);
+
+        if (!result.ok) {
+          showErrors('le-', LOGIN_FIELDS, result.errors);
+          return;
+        }
+
+        // The app opens either way; a session that could not be written just
+        // means this sign-in will not survive a restart, which afterSave reports.
+        window.UI.afterSave(function () {
+          resetForms();
+          window.UI.enterApp();
+          window.UI.toast('Signed in to ' + result.account.schoolName);
+        }, function () {
+          resetForms();
+          window.UI.enterApp();
+        });
+      }
+    );
+  }
+
+  /* Sign-in and setup can now involve a network round trip, so the button has
+     to say something is happening and refuse a second tap. */
+  function busy(button, on, label) {
+    if (!button) return;
+    if (on) {
+      button.dataset.idleLabel = button.dataset.idleLabel || button.textContent;
+      button.textContent = label || button.textContent;
+      button.disabled = true;
       return;
     }
-
-    // The app opens either way; a session that could not be written just
-    // means this sign-in will not survive a restart, which afterSave reports.
-    window.UI.afterSave(function () {
-      resetForms();
-      window.UI.enterApp();
-      window.UI.toast('Signed in to ' + result.account.schoolName);
-    }, function () {
-      resetForms();
-      window.UI.enterApp();
-    });
+    if (button.dataset.idleLabel) button.textContent = button.dataset.idleLabel;
+    button.disabled = false;
   }
 
   /* ---------------------------------------------------------------- view */
@@ -194,17 +222,17 @@
     }
   }
 
-  /** Show the setup form or the sign-in form. */
+  /** Show the sign-in form or the setup form. */
   function show(next) {
-    // With no account on the device there is nothing to sign in to.
-    if (next !== 'register' && !Auth.hasAccounts()) next = 'register';
+    /* Sign-in is offered even with no account on this device: the account may
+       exist in the cloud and this may be the teacher's second phone. Both ways
+       between the two forms stay open, so nobody can be stranded on one. */
     mode = next === 'register' ? 'register' : 'login';
 
     el.registerForm.hidden = mode !== 'register';
     el.loginForm.hidden = mode !== 'login';
 
-    // Only offer "sign in instead" when there is an account to sign in to.
-    el.toLogin.parentNode.hidden = !Auth.hasAccounts();
+    el.toLogin.parentNode.hidden = false;
 
     el.brandName.textContent = 'School Attendance';
     resetReveals();
@@ -233,9 +261,12 @@
     el.logoPick = $('r-logo-pick');
     el.logoClear = $('r-logo-clear');
 
+    el.registerSubmit = $('r-submit');
+
     el.identifier = $('l-identifier');
     el.loginPassword = $('l-password');
     el.remember = $('l-remember');
+    el.loginSubmit = $('l-submit');
 
     el.toLogin = $('to-login');
     el.toRegister = $('to-register');
